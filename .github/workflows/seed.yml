@@ -1,0 +1,49 @@
+name: CDN Seeder
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'cdn-seeder/**'
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            cdn-seeder/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('cdn-seeder/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+
+      - name: Build release
+        working-directory: cdn-seeder
+        run: cargo build --release
+
+      - name: Get external IP
+        id: ip
+        run: |
+          IP=$(curl -s https://api.ipify.org)
+          echo "external_ip=$IP" >> "$GITHUB_OUTPUT"
+
+      - name: Run seeder
+        working-directory: cdn-seeder
+        run: |
+          echo "========================================"
+          echo "  CDN BitTorrent Seeder"
+          echo "  External IP: ${{ steps.ip.outputs.external_ip }}"
+          echo "========================================"
+          timeout 600 ./target/release/cdn-seeder \
+            test.torrent \
+            "https://raw.githubusercontent.com/stucco-good-clad/supreme-octo-fiesta/refs/heads/main"
