@@ -88,6 +88,7 @@ private:
     lt::aux::disk_buffer_pool m_buffer_pool;
     boost::asio::thread_pool m_pool{6};
     std::atomic<bool> m_aborted{false};
+    bool m_disable_hash_checks = false;
     std::string m_base_url = "https://raw.githubusercontent.com/stucco-good-clad/supreme-octo-fiesta/refs/heads/main";
     int m_piece_size = 1048576;
 };

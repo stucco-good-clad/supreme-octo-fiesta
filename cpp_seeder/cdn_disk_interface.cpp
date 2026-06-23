@@ -17,6 +17,7 @@ cdn_disk_interface::cdn_disk_interface(
 : m_ioc(ioc)
 , m_counters(cnt)
 , m_buffer_pool(ioc)
+, m_disable_hash_checks(settings.get_bool(lt::settings_pack::disable_hash_checks))
 {
     m_buffer_pool.set_settings(settings);
 }
@@ -130,8 +131,16 @@ void cdn_disk_interface::async_hash(
     std::function<void(lt::piece_index_t, lt::sha1_hash const&,
         lt::storage_error const&)> handler)
 {
-    fprintf(stderr, "\n[CDN_DEBUG] async_hash called: piece=%d\n",
-        static_cast<int>(piece));
+    fprintf(stderr, "\n[CDN_DEBUG] async_hash called: piece=%d disable_hash_checks=%d\n",
+        static_cast<int>(piece), int(m_disable_hash_checks));
+
+    if (m_disable_hash_checks) {
+        boost::asio::post(m_ioc, [this, piece, handler = std::move(handler)] {
+            if (m_aborted) return;
+            handler(piece, lt::sha1_hash{}, lt::storage_error{});
+        });
+        return;
+    }
 
     boost::asio::post(m_pool, [this, piece, handler = std::move(handler)] {
         if (m_aborted) return;
