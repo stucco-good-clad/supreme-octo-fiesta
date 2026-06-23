@@ -21,6 +21,10 @@ add_custom_command(
     OUTPUT ${CDN_FETCH_LIB}
     COMMAND cargo build --release
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libcdn_fetch
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/libcdn_fetch/src/lib.rs
+        ${CMAKE_CURRENT_SOURCE_DIR}/libcdn_fetch/Cargo.toml
+        ${CMAKE_CURRENT_SOURCE_DIR}/libcdn_fetch/Cargo.lock
     COMMENT "Building Rust CDN fetch library (cargo build --release)"
 )
 

@@ -32,7 +32,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             cpp_seeder/libcdn_fetch/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('cpp_seeder/libcdn_fetch/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('cpp_seeder/libcdn_fetch/Cargo.lock', 'cpp_seeder/libcdn_fetch/src/lib.rs') }}
 
       - name: Cache cmake build
         uses: actions/cache@v4
