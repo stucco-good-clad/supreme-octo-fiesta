@@ -14,8 +14,13 @@
 #include <vector>
 #include <cstdio>
 
+extern "C" void cdn_cache_init(int piece_size, int soft_limit_mb, int hard_limit_mb);
+
 int main() {
     try {
+        // Initialize Rust piece cache: 1MB pieces, 8GB soft, 12GB hard limit
+        cdn_cache_init(1048576, 8192, 12288);
+
         lt::session_params params;
         params.disk_io_constructor = &cdn_disk_interface::create;
 
@@ -40,6 +45,12 @@ int main() {
         pack.set_int(lt::settings_pack::num_optimistic_unchoke_slots, -1);
         pack.set_int(lt::settings_pack::seed_choking_algorithm,
                      lt::settings_pack::seed_choking_algorithm_t::fastest_upload);
+
+        // Buffer tuning for CDN-backed seeding (fast reads, variable TCP)
+        pack.set_int(lt::settings_pack::send_buffer_watermark, 100 * 1024 * 1024);          // 100 MB per peer
+        pack.set_int(lt::settings_pack::send_buffer_watermark_deferred, 500 * 1024 * 1024); // 500 MB deferred
+        pack.set_int(lt::settings_pack::max_queued_disk_bytes, 50 * 1024 * 1024);           // 50 MB disk queue
+        pack.set_int(lt::settings_pack::max_peer_recv_buffer_size, 5 * 1024 * 1024);        // 5 MB recv buffer
 
         lt::session ses(params);
 

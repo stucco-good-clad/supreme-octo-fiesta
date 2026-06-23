@@ -34,6 +34,12 @@ jobs:
             cpp_seeder/libcdn_fetch/target
           key: cargo-${{ runner.os }}-${{ hashFiles('cpp_seeder/libcdn_fetch/Cargo.lock') }}
 
+      - name: Cache cmake build
+        uses: actions/cache@v4
+        with:
+          path: cpp_seeder/build
+          key: cmake-${{ runner.os }}-${{ hashFiles('cpp_seeder/CMakeLists.txt', 'cpp_seeder/cdn_seed.cpp', 'cpp_seeder/cdn_disk_interface.cpp', 'cpp_seeder/cdn_disk_interface.hpp', 'cpp_seeder/libcdn_fetch/src/lib.rs', 'cpp_seeder/libcdn_fetch/Cargo.lock') }}
+
       - name: Build release
         working-directory: cpp_seeder
         run: |
