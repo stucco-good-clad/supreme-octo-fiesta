@@ -48,7 +48,7 @@ int main() {
 
         // Buffer tuning for CDN-backed seeding (fast reads, variable TCP)
         pack.set_int(lt::settings_pack::send_buffer_watermark, 100 * 1024 * 1024);          // 100 MB per peer
-        pack.set_int(lt::settings_pack::send_buffer_watermark_deferred, 500 * 1024 * 1024); // 500 MB deferred
+        pack.set_int(lt::settings_pack::send_buffer_low_watermark, 512 * 1024);             // 512 KB initial window
         pack.set_int(lt::settings_pack::max_queued_disk_bytes, 50 * 1024 * 1024);           // 50 MB disk queue
         pack.set_int(lt::settings_pack::max_peer_recv_buffer_size, 5 * 1024 * 1024);        // 5 MB recv buffer
 
