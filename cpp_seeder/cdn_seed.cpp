@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 #include <cstdio>
+#include <cstdlib>
+#include <sstream>
 
 extern "C" void cdn_cache_init(int piece_size, int soft_limit_mb, int hard_limit_mb);
 
@@ -44,7 +46,7 @@ int main() {
         pack.set_int(lt::settings_pack::unchoke_slots_limit, -1);
         pack.set_int(lt::settings_pack::num_optimistic_unchoke_slots, -1);
         pack.set_int(lt::settings_pack::seed_choking_algorithm,
-                     lt::settings_pack::seed_choking_algorithm_t::fastest_upload);
+                     lt::settings_pack::seed_choking_algorithm_t::round_robin);
 
         // Buffer tuning for CDN-backed seeding (fast reads, variable TCP)
         pack.set_int(lt::settings_pack::send_buffer_watermark, 100 * 1024 * 1024);          // 100 MB per peer
@@ -59,12 +61,43 @@ int main() {
         atp.ti = std::make_shared<lt::torrent_info>(torrent_path);
         atp.save_path = "/tmp/cdn_seed_dummy";
 
+        atp.trackers = {
+            "http://tracker.openbittorrent.com:443/announce",
+            "https://tracker.openbittorrent.com:443/announce",
+            "http://tracker.bittor.pw:443/announce",
+            "http://tracker3.itzmx.com:6961/announce",
+        };
+
         int num_pieces = atp.ti->num_pieces();
         atp.have_pieces.resize(num_pieces, true);
         atp.verified_pieces.resize(num_pieces, true);
         atp.flags |= lt::torrent_flags::seed_mode;
 
         lt::torrent_handle h = ses.add_torrent(atp);
+
+        char const* peer_addrs = std::getenv("PEER_ADDRS");
+        if (peer_addrs && peer_addrs[0]) {
+            std::string addrs(peer_addrs);
+            std::cout << "Connecting to peers from PEER_ADDRS: " << addrs << std::endl;
+            std::istringstream ss(addrs);
+            std::string addr;
+            while (std::getline(ss, addr, ',')) {
+                auto colon = addr.rfind(':');
+                if (colon != std::string::npos) {
+                    std::string ip = addr.substr(0, colon);
+                    int port = std::stoi(addr.substr(colon + 1));
+                    lt::error_code ec;
+                    auto ep = lt::tcp::endpoint(
+                        lt::address::from_string(ip, ec), port);
+                    if (!ec) {
+                        h.connect_peer(ep, lt::peer_info::pex);
+                        std::cout << "  => connecting to " << ip << ":" << port << std::endl;
+                    } else {
+                        std::cerr << "  => invalid peer address: " << addr << std::endl;
+                    }
+                }
+            }
+        }
 
         std::cout << "CDN Seed started. Pieces: " << num_pieces
                   << " | Monitoring (Ctrl+C to stop)...\n"

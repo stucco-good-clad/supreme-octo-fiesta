@@ -2,6 +2,16 @@ name: CDN Seeder (C++)
 
 on:
   workflow_dispatch:
+    inputs:
+      peer_addrs:
+        description: 'Leecher IP:port pairs, comma-separated (e.g. "1.2.3.4:6881,5.6.7.8:6881")'
+        required: false
+        type: string
+      timeout:
+        description: 'Seeder run duration in seconds'
+        required: false
+        default: '600'
+        type: string
   push:
     branches: [main]
     paths:
@@ -54,9 +64,14 @@ jobs:
 
       - name: Run seeder
         working-directory: cpp_seeder
+        env:
+          PEER_ADDRS: ${{ inputs.peer_addrs || vars.PEER_ADDRS || '' }}
         run: |
           echo "========================================"
           echo "  CDN BitTorrent Seeder (C++)"
           echo "  External IP: ${{ steps.ip.outputs.external_ip }}"
+          if [ -n "$PEER_ADDRS" ]; then
+            echo "  Manual peers: $PEER_ADDRS"
+          fi
           echo "========================================"
-          timeout 600 ./build/cdn_seed
+          timeout ${{ inputs.timeout || '600' }} ./build/cdn_seed
