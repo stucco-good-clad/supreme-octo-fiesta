@@ -1,18 +1,26 @@
-name: CDN Seeder
+name: CDN Seeder (C++)
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
     paths:
-      - 'cdn-seeder/**'
+      - 'cpp_seeder/**'
 
 jobs:
   seed:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake pkg-config \
+            libssl-dev \
+            libboost-dev
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -23,13 +31,14 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            cdn-seeder/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('cdn-seeder/Cargo.lock') }}
-          restore-keys: cargo-${{ runner.os }}-
+            cpp_seeder/libcdn_fetch/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('cpp_seeder/libcdn_fetch/Cargo.lock') }}
 
       - name: Build release
-        working-directory: cdn-seeder
-        run: cargo build --release
+        working-directory: cpp_seeder
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j$(nproc)
 
       - name: Get external IP
         id: ip
@@ -38,12 +47,10 @@ jobs:
           echo "external_ip=$IP" >> "$GITHUB_OUTPUT"
 
       - name: Run seeder
-        working-directory: cdn-seeder
+        working-directory: cpp_seeder
         run: |
           echo "========================================"
-          echo "  CDN BitTorrent Seeder"
+          echo "  CDN BitTorrent Seeder (C++)"
           echo "  External IP: ${{ steps.ip.outputs.external_ip }}"
           echo "========================================"
-          timeout 600 ./target/release/cdn-seeder \
-            test.torrent \
-            "https://raw.githubusercontent.com/stucco-good-clad/supreme-octo-fiesta/refs/heads/main"
+          timeout 600 ./build/cdn_seed
